@@ -1,6 +1,7 @@
 ﻿// Copyright EVRStudio. All Rights Reserved.
 
 #include "NeuralNetworkActor.h"
+#include <cmath>
 
 DEFINE_LOG_CATEGORY(LogNeuralNetwork);
 
@@ -23,7 +24,7 @@ void ANeuralNetworkActor::BeginPlay()
 	if (TargetSeq)
 	{
 		TargetSeqLength = TargetSeq->GetPlayLength();
-		SegSize = int(TargetSeqLength / 0.2f) + 1;
+		SegSize = int(TargetSeqLength / 0.1f);
 		SeqData = new Example[SegSize];
 
 		for (int i = 0; i < SegSize; ++i)
@@ -34,35 +35,6 @@ void ANeuralNetworkActor::BeginPlay()
 
 		NN.initialize(3, 1, HiddenLayerNum);
 		NN.alpha_ = LearningRate;
-
-		//for (int c = 0; c < LearningNum; ++c)
-		//{
-		//	float CurTime = 0.f;
-
-		//	for (int i = 0; i < SegSize; ++i)
-		//	{
-		//		FVector Location = TargetSeq->ExtractRootMotion(0.f, CurTime, false).GetTranslation();
-		//		VectorND<D> y_temp(2);
-		//		SeqData[i].X[0] = Location.X;
-		//		SeqData[i].X[1] = Location.Y;
-		//		SeqData[i].X[2] = Location.Z;
-		//		SeqData[i].Y[0] = CurTime;
-		//		CurTime += 0.2f;
-
-		//		NN.setInputVector(SeqData[i].X);
-		//		NN.propForward();
-
-		//		NN.copyOutputVector(y_temp);
-
-		//		double y = y_temp[0];
-		//		double y_ = SeqData[i].Y[0];
-
-		//		UE_LOG(LogNeuralNetwork, Log, TEXT("%lf %lf"), y_, y);
-		//		NN.propBackward(SeqData[i].Y);
-		//	}
-
-		//	UE_LOG(LogNeuralNetwork, Log, TEXT(" "));
-		//}
 	}
 }
 
@@ -90,18 +62,18 @@ void ANeuralNetworkActor::Tick(float DeltaTime)
 				SeqData[i].X[0] = Location.X;
 				SeqData[i].X[1] = Location.Y;
 				SeqData[i].X[2] = Location.Z;
-				SeqData[i].Y[0] = CurTime;
-				CurTime += 0.2f;
+				SeqData[i].Y[0] = CurTime * 10;
+				CurTime += 0.1f;
 
 				NN.setInputVector(SeqData[i].X);
 				NN.propForward();
 
 				NN.copyOutputVector(y_temp);
 
-				double y = y_temp[0];
-				double y_ = SeqData[i].Y[0];
+				int y = int(round(y_temp[0]));
+				int y_ = int(SeqData[i].Y[0]);
 
-				UE_LOG(LogNeuralNetwork, Log, TEXT("%lf %lf"), y_, y);
+				UE_LOG(LogNeuralNetwork, Log, TEXT("%d %d"), y_, y);
 				NN.propBackward(SeqData[i].Y);
 			}
 
@@ -121,4 +93,28 @@ void ANeuralNetworkActor::StartLearning()
 void ANeuralNetworkActor::StopLearning()
 {
 	bStartLearning = false;
+}
+
+FVector ANeuralNetworkActor::GetRootMotion(float Time)
+{
+	return TargetSeq->ExtractRootMotion(0.f, Time, false).GetTranslation();
+}
+
+int ANeuralNetworkActor::SearchAnimIndex(FVector AnimLocation)
+{
+	VectorND<D> LocationInput;
+	VectorND<D> Output;
+
+	LocationInput.initialize(3);
+	Output.initialize(1);
+
+	LocationInput[0] = AnimLocation.X;
+	LocationInput[1] = AnimLocation.Y;
+	LocationInput[2] = AnimLocation.Z;
+
+	NN.setInputVector(LocationInput);
+	NN.propForward();
+	NN.copyOutputVector(Output);
+
+	return int(round(Output[0]));
 }

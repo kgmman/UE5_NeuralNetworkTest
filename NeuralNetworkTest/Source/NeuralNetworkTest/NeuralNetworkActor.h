@@ -24,6 +24,12 @@ class NEURALNETWORKTEST_API ANeuralNetworkActor : public AActor
 	GENERATED_BODY()
 public:	
 	ANeuralNetworkActor();
+public:
+	UFUNCTION(BlueprintCallable)
+	int SearchAnimIndex(FVector AnimLocation);
+
+	UFUNCTION(BlueprintCallable)
+	FVector GetRootMotion(float Time);
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
